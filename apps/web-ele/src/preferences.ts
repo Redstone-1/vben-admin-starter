@@ -8,6 +8,11 @@ import { defineOverridesPreferences } from '@vben/preferences';
 export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
+    accessMode: 'mixed',
     name: import.meta.env.VITE_APP_TITLE,
+  },
+  widget: {
+    languageToggle: false,
+    notification: false,
   },
 });

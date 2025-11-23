@@ -113,9 +113,9 @@ watch(
       <UserDropdown
         :avatar
         :menus="[]"
-        :text="userStore.userInfo?.realName"
+        :text="userStore.userInfo?.userName || '默认昵称'"
         description=""
-        tag-text="Pro"
+        :tag-text="userStore.userInfo?.roles?.[0]?.roleName || '普通角色'"
         @logout="handleLogout"
       />
     </template>

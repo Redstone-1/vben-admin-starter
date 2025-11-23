@@ -106,7 +106,15 @@ class RequestClient {
   /**
    * GET请求方法
    */
-  public get<T = any>(url: string, config?: RequestClientConfig): Promise<T> {
+  public get<T = any>(
+    url: string,
+    data?: any,
+    config?: RequestClientConfig,
+  ): Promise<T> {
+    if (data) {
+      url += (url.includes('?') ? '&' : '?') + qs.stringify(data);
+    }
+
     return this.request<T>(url, { ...config, method: 'GET' });
   }
 

@@ -11,7 +11,7 @@ import {
   errorMessageResponseInterceptor,
   RequestClient,
 } from '@vben/request';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { ElMessage } from 'element-plus';
 
@@ -50,7 +50,8 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
    */
   async function doRefreshToken() {
     const accessStore = useAccessStore();
-    const resp = await refreshTokenApi();
+    const userStore = useUserStore();
+    const resp = await refreshTokenApi(userStore.userInfo?.userId as number);
     const newToken = resp.data;
     accessStore.setAccessToken(newToken);
     return newToken;

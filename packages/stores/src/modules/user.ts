@@ -13,11 +13,11 @@ interface BasicUserInfo {
   /**
    * 用户角色
    */
-  roles?: string[];
+  roles?: any;
   /**
    * 用户id
    */
-  userId: string;
+  userId: number;
   /**
    * 用户名
    */
