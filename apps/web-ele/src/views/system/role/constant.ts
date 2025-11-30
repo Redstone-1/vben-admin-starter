@@ -78,11 +78,15 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
             pageNum: page.currentPage,
             pageSize: page.pageSize,
             status: searchForm.status,
-            userName: searchForm.userName,
+            roleName: searchForm.roleName,
           };
 
           if (searchForm.status === '') {
             delete params.status;
+          }
+
+          if (searchForm.roleName === '') {
+            delete params.roleName;
           }
 
           const res = await getRoleListApi(params);
@@ -105,4 +109,27 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
   };
 
   return gridOptions;
+};
+
+export interface AddForm {
+  roleName: string;
+  deptIds: number[];
+  menuIds: number[];
+  roleKey: string;
+  roleSort: number;
+  status: string;
+  remark: string;
+  menuCheckStrictly: boolean;
+  menuTree?: any[];
+}
+
+export const addFormInitValue: AddForm = {
+  roleName: '',
+  status: '',
+  remark: '',
+  menuCheckStrictly: true,
+  deptIds: [],
+  menuIds: [],
+  roleKey: '',
+  roleSort: 2,
 };

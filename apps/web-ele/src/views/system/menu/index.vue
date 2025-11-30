@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { MenuInfo } from '@vben/types';
+
 import type { RowType } from './constant';
 
 import { reactive, ref } from 'vue';
@@ -17,41 +19,45 @@ import {
 } from 'element-plus';
 
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
-import {
-  deleteUserApi,
-  getUserApi,
-  postUserApi,
-  putUserApi,
-} from '#/views/system/user/api';
 
 import AddForm from './add-form.vue';
+import { deleteMenuApi, postMenuApi, putMenuApi } from './api';
 import { getGridOptions } from './constant';
 
+const modalTitle = ref('新增菜单');
+const listRef = ref<MenuInfo[]>([]);
 const searchForm = reactive({
-  userName: '',
+  menuName: '',
   status: '',
 });
-const gridApiRef = ref();
-const gridOptions = getGridOptions(searchForm, gridApiRef);
+const gridOptions = getGridOptions(searchForm, listRef);
 const [Grid, gridApi] = useVbenVxeGrid({ gridOptions });
 const [Modal, modalApi] = useVbenModal({
   // 连接抽离的组件
   connectedComponent: AddForm,
-  title: '新增用户',
+  title: modalTitle.value,
+  onBeforeClose: () => {
+    const { addFormRef } = modalApi.getData();
+    addFormRef.value.resetFields();
+    return true;
+  },
   onConfirm: async () => {
-    const { addForm, addFormRef, row } = modalApi.getData();
+    const { addForm, addFormRef, row, isAdd } = modalApi.getData();
 
     await addFormRef.value.validate((valid: boolean) => {
       if (valid) {
         modalApi.lock();
+        const params = row
+          ? { ...row, ...addForm }
+          : {
+              ...addForm,
+              menuSort: 2,
+              delFlag: '0',
+              deptCheckStrictly: false,
+              menuCheckStrictly: true,
+            };
 
-        (row ? putUserApi : postUserApi)({
-          ...addForm,
-          nickName: addForm.userName,
-          roleIds: [addForm.roleIds || undefined],
-          remark: addForm.roleIds === 1 ? '管理员' : '普通用户',
-          userId: row?.userId || undefined,
-        })
+        (isAdd ? postMenuApi : putMenuApi)(params)
           .then(() => {
             modalApi.close();
             addFormRef.value.resetFields();
@@ -65,12 +71,19 @@ const [Modal, modalApi] = useVbenModal({
   },
 });
 
-gridApiRef.value = gridApi;
-
-const openModal = (row?: RowType) => {
+const openModal = (
+  row: RowType | undefined,
+  isAdd: boolean = true,
+  isAddChild = false,
+) => {
+  modalTitle.value = isAdd ? '新增菜单' : '编辑菜单';
   modalApi.setData({
     ...modalApi.getData(),
-    row,
+    row: {
+      ...row,
+      parentId: row ? (isAddChild ? row!.menuId : row!.parentId) : 0,
+    },
+    menuList: listRef.value,
   });
 
   modalApi.open();
@@ -80,41 +93,22 @@ const onSearch = () => {
   gridApi?.query();
 };
 
-function hasEditStatus(row: RowType) {
-  return gridApi.grid?.isEditByRow(row);
+async function deleteMenu(menuId: number) {
+  try {
+    await gridApi.grid?.clearEdit();
+
+    gridApi.setLoading(true);
+    await deleteMenuApi(menuId);
+    await gridApi.query();
+    gridApi.setLoading(false);
+  } catch {
+    gridApi.setLoading(false);
+  }
 }
-
-async function updateUser(row: RowType) {
-  await gridApi.grid?.clearEdit();
-
-  gridApi.setLoading(true);
-  const { data: userInfo, roleIds } = await getUserApi(row.userId);
-  await putUserApi({
-    ...userInfo,
-    roleIds,
-    userName: row.userName,
-    remark: row.remark,
-  });
-  await gridApi.query();
-  gridApi.setLoading(false);
-}
-
-async function deleteUser(userId: number) {
-  await gridApi.grid?.clearEdit();
-
-  gridApi.setLoading(true);
-  await deleteUserApi(userId);
-  await gridApi.query();
-  gridApi.setLoading(false);
-}
-
-const cancelRowEvent = (_row: RowType) => {
-  gridApi.grid?.clearEdit();
-};
 </script>
 
 <template>
-  <div class="system-user flex h-full flex-col p-5">
+  <div class="system-menu flex h-full flex-col p-5">
     <!-- template 下必须有一个根标签，Modal 必须在根标签下 -->
     <Modal />
 
@@ -122,8 +116,8 @@ const cancelRowEvent = (_row: RowType) => {
       class="bg-card text-card-foreground border-border w-full rounded-xl border p-5"
     >
       <ElForm :inline="true" :model="searchForm">
-        <ElFormItem label="用户名">
-          <ElInput v-model="searchForm.userName" placeholder="请填写用户名" />
+        <ElFormItem label="菜单名">
+          <ElInput v-model="searchForm.menuName" placeholder="请填写菜单名" />
         </ElFormItem>
         <ElFormItem label="状态">
           <ElRadioGroup v-model="searchForm.status">
@@ -140,40 +134,40 @@ const cancelRowEvent = (_row: RowType) => {
 
     <div class="flex justify-start pl-1 pr-1 pt-5">
       <ElSpace size="small">
-        <ElButton type="primary" @click="openModal()">新增</ElButton>
+        <ElButton type="primary" @click="openModal(undefined)">新增</ElButton>
       </ElSpace>
     </div>
 
     <div class="mt-5 h-full flex-1">
       <Grid>
         <template #action="{ row }">
-          <template v-if="hasEditStatus(row)">
-            <ElSpace size="small">
-              <ElButton type="text" @click="updateUser(row)"> 保存 </ElButton>
-              <ElButton type="text" @click="cancelRowEvent(row)">
-                取消
-              </ElButton>
-            </ElSpace>
-          </template>
-          <template v-else>
-            <ElSpace>
-              <ElButton type="text" @click="openModal(row)"> 编辑 </ElButton>
-              <ElPopconfirm
-                title="确定删除吗?"
-                @confirm="deleteUser(row.userId)"
-              >
-                <template #reference>
-                  <ElButton
-                    class="delete-btn"
-                    type="text"
-                    v-if="row.userId !== 1"
-                  >
-                    删除
-                  </ElButton>
-                </template>
-              </ElPopconfirm>
-            </ElSpace>
-          </template>
+          <ElSpace>
+            <ElButton
+              type="text"
+              @click="openModal(row, false)"
+              v-if="row.menuId !== 1"
+            >
+              编辑
+            </ElButton>
+            <ElButton
+              type="text"
+              @click="openModal(row, true, true)"
+              v-if="row.menuId !== 1"
+            >
+              新增子菜单
+            </ElButton>
+            <ElPopconfirm title="确定删除吗?" @confirm="deleteMenu(row.menuId)">
+              <template #reference>
+                <ElButton
+                  class="delete-btn"
+                  type="text"
+                  v-if="row.menuId !== 1"
+                >
+                  删除
+                </ElButton>
+              </template>
+            </ElPopconfirm>
+          </ElSpace>
         </template>
       </Grid>
     </div>
@@ -181,7 +175,7 @@ const cancelRowEvent = (_row: RowType) => {
 </template>
 
 <style scoped lang="scss">
-.system-user {
+.system-menu {
   .el-form-item {
     margin-bottom: 0;
   }

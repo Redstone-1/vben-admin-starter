@@ -120,6 +120,10 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
             delete params.status;
           }
 
+          if (searchForm.userName === '') {
+            delete params.userName;
+          }
+
           const res = await getUserListApi(params);
 
           if (!res) {
@@ -140,4 +144,20 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
   };
 
   return gridOptions;
+};
+
+export interface AddForm {
+  userName: string;
+  password: string;
+  roleIds: number | undefined;
+  status: string;
+  remark: string;
+}
+
+export const addFormInitValue: AddForm = {
+  userName: '',
+  password: '',
+  roleIds: undefined,
+  status: '',
+  remark: '',
 };

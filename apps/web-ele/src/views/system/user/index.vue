@@ -27,12 +27,13 @@ const searchForm = reactive({
   status: '',
 });
 const gridApiRef = ref();
+const modalTitle = ref('新增用户');
 const gridOptions = getGridOptions(searchForm, gridApiRef);
 const [Grid, gridApi] = useVbenVxeGrid({ gridOptions });
 const [Modal, modalApi] = useVbenModal({
   // 连接抽离的组件
   connectedComponent: AddForm,
-  title: '新增用户',
+  title: modalTitle.value,
   onConfirm: async () => {
     const { addForm, addFormRef, row } = modalApi.getData();
 
@@ -40,11 +41,14 @@ const [Modal, modalApi] = useVbenModal({
       if (valid) {
         modalApi.lock();
 
+        if (row) {
+          delete addForm.password;
+        }
+
         (row ? putUserApi : postUserApi)({
           ...addForm,
           nickName: addForm.userName,
           roleIds: [addForm.roleIds || undefined],
-          remark: addForm.roleIds === 1 ? '管理员' : '普通用户',
           userId: row?.userId || undefined,
         })
           .then(() => {
@@ -63,6 +67,7 @@ const [Modal, modalApi] = useVbenModal({
 gridApiRef.value = gridApi;
 
 const openModal = (row?: RowType) => {
+  modalTitle.value = row ? '编辑用户' : '新增用户';
   modalApi.setData({
     ...modalApi.getData(),
     row,
@@ -76,12 +81,16 @@ const onSearch = () => {
 };
 
 async function deleteUser(userId: number) {
-  await gridApi.grid?.clearEdit();
+  try {
+    await gridApi.grid?.clearEdit();
 
-  gridApi.setLoading(true);
-  await deleteUserApi(userId);
-  await gridApi.query();
-  gridApi.setLoading(false);
+    gridApi.setLoading(true);
+    await deleteUserApi(userId);
+    await gridApi.query();
+    gridApi.setLoading(false);
+  } catch {
+    gridApi.setLoading(false);
+  }
 }
 </script>
 

@@ -1,6 +1,8 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus';
 
+import type { AddForm } from './constant';
+
 import { reactive, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
@@ -15,36 +17,35 @@ import {
   ElSelect,
 } from 'element-plus';
 
+import { addFormInitValue } from './constant';
+
 defineOptions({
   name: 'AddForm',
 });
 
-interface AddForm {
-  userName: string;
-  password: string;
-  roleIds: number | undefined;
-  status: string;
-  remark: string;
-}
-
+const addForm = reactive<AddForm>(Object.assign({}, addFormInitValue));
+const addFormRef = ref<FormInstance>();
 const [Modal, modalApi] = useVbenModal({
-  onOpenChange: (isOpen) => {
+  onOpened: () => {
+    addFormRef.value?.resetFields();
+
     const { row } = modalApi.getData();
-    if (isOpen && row) {
+
+    if (row) {
       addForm.userName = row.userName;
       addForm.roleIds = row.roles?.roleId || undefined;
       addForm.status = row.status;
       addForm.remark = row.remark;
+    } else {
+      addForm.userName = '';
+      addForm.password = '';
+      addForm.roleIds = undefined;
+      addForm.status = '';
+      addForm.remark = '';
     }
+
+    return true;
   },
-});
-const addFormRef = ref<FormInstance>();
-const addForm = reactive<AddForm>({
-  userName: '',
-  password: '',
-  roleIds: undefined,
-  status: '',
-  remark: '',
 });
 
 modalApi.setData({

@@ -1,103 +1,85 @@
+import type { Ref } from 'vue';
+
 import type { VxeGridProps } from '@vben/plugins/vxe-table';
-import type { UserInfo } from '@vben/types';
+import type { MenuInfo } from '@vben/types';
 
 import { h } from 'vue';
 
-import { ElOption, ElSelect, ElSwitch } from 'element-plus';
+import { ElTag } from 'element-plus';
 
-import { changeStatusApi, changeUserRoleApi, getUserListApi } from './api';
+import { flattenTreeMenu, genMenuTree } from '#/utils/genMenuTree';
 
-export interface RowType extends UserInfo {
-  userName: string;
-  status: string;
-  remark: string;
-}
+import { getMenuListApi } from './api';
 
-export const getGridOptions = (searchForm: any, gridApiRef: any) => {
+export type RowType = MenuInfo;
+
+export const getGridOptions = (searchForm: any, listRef: Ref<MenuInfo[]>) => {
   const gridOptions: VxeGridProps<RowType> = {
     columns: [
       {
-        field: 'userName',
-        title: '用户名',
+        field: 'menuName',
+        title: '菜单名称',
+        align: 'left',
+        treeNode: true,
         slots: {
           default: ({ row }: { row: RowType }) => {
             return h(
               'div', // 组件名称（全局注册的名称）
               {
                 // 组件属性
-                modelValue: row.userName, // 绑定行数据的 status 字段
+                modelValue: row.menuName, // 绑定行数据的 menuName 字段
                 style: {
                   fontSize: '14px',
                   fontWeight: 'bold',
                 },
-                textContent: row.userName,
+                textContent: row.menuName,
               },
               // 可选：组件插槽（el-switch 无默认插槽，可省略）
-            );
-          },
-        },
-      },
-      {
-        title: '角色',
-        slots: {
-          default: ({ row }: { row: RowType }) => {
-            // 确保 row.roles 和 row.roles.roleId 存在，避免渲染错误
-            const roleId = row.roles?.roleId || '';
-
-            return h(
-              ElSelect, // 组件名称（全局注册的名称）
-              {
-                // 组件属性
-                modelValue: roleId, // 绑定行数据的 roleId 字段
-                // 事件绑定（@change 对应组件的 change 事件）
-                onChange: async (val: any) => {
-                  await changeUserRoleApi({
-                    roleIds: [val],
-                    userId: row.userId,
-                  });
-                  gridApiRef.value?.query();
-                },
-                disabled: row.userId === 1,
-              },
-              // 使用子组件 ElOption 来定义下拉选项
-              () => [
-                h(ElOption, { label: '管理员', value: 1 }),
-                h(ElOption, { label: '普通用户', value: 2 }),
-              ],
             );
           },
         },
       },
       {
         title: '状态',
+        align: 'left',
         slots: {
           default: ({ row }: { row: RowType }) => {
             return h(
-              ElSwitch, // 组件名称（全局注册的名称）
+              ElTag, // 组件名称（全局注册的名称）
               {
                 // 组件属性
-                modelValue: row.status, // 绑定行数据的 status 字段
-                activeValue: '0', // 开启对应值（与后端一致）
-                inactiveValue: '1', // 关闭对应值
+                textContent: row.status === '0' ? '正常' : '停用', // 绑定行数据的 status 字段
+                type: row.status === '0' ? 'success' : 'danger',
                 size: 'small',
-                // 事件绑定（@change 对应组件的 change 事件）
-                onChange: async (val: any) => {
-                  await changeStatusApi({
-                    status: val,
-                    userId: row.userId,
-                  });
-                  gridApiRef.value?.query();
-                },
-                disabled: row.userId === 1,
               },
-              // 可选：组件插槽（el-switch 无默认插槽，可省略）
             );
           },
         },
       },
       {
+        title: '对应组件',
+        field: 'component',
+        align: 'left',
+      },
+      {
+        title: '图标',
+        field: 'icon',
+        align: 'left',
+      },
+      {
+        title: '排序序号',
+        field: 'orderNum',
+        align: 'left',
+      },
+      {
+        title: '路径',
+        field: 'path',
+        align: 'left',
+      },
+      {
         field: 'remark',
         title: '备注',
+        align: 'left',
       },
       { slots: { default: 'action' }, title: '操作' },
     ],
@@ -105,22 +87,31 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
       mode: 'row',
       trigger: 'click',
     },
-    pagerConfig: {},
+    treeConfig: {
+      parentField: 'parentId',
+      rowField: 'menuId',
+      transform: true,
+    },
+    pagerConfig: {
+      enabled: false,
+    },
     proxyConfig: {
       ajax: {
-        query: async ({ page }) => {
+        query: async () => {
           const params = {
-            pageNum: page.currentPage,
-            pageSize: page.pageSize,
             status: searchForm.status,
-            userName: searchForm.userName,
+            menuName: searchForm.menuName,
           };
 
           if (searchForm.status === '') {
             delete params.status;
           }
 
-          const res = await getUserListApi(params);
+          if (searchForm.menuName === '') {
+            delete params.menuName;
+          }
+
+          const res = await getMenuListApi(params);
 
           if (!res) {
             return {
@@ -129,9 +120,13 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
             };
           }
 
+          const menuTree = genMenuTree(res);
+          const flatMenuTree = flattenTreeMenu(menuTree);
+          listRef.value = flatMenuTree;
+
           return {
-            total: res.total,
-            items: res.list,
+            total: res.length,
+            items: flatMenuTree,
           };
         },
       },
@@ -140,4 +135,32 @@ export const getGridOptions = (searchForm: any, gridApiRef: any) => {
   };
 
   return gridOptions;
+};
+
+export interface AddForm {
+  menuName: string;
+  menuType: string;
+  status: string;
+  remark: string;
+  parentMenu: string;
+  parentId: number;
+  icon: string;
+  path: string;
+  orderNum: number;
+  component: string;
+  visible: '0' | '1';
+}
+
+export const addFormInitValue: AddForm = {
+  menuName: '',
+  menuType: 'C',
+  status: '',
+  remark: '',
+  parentMenu: '根菜单',
+  parentId: 0,
+  icon: '',
+  path: '',
+  orderNum: 1,
+  component: '',
+  visible: '0',
 };

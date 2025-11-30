@@ -115,7 +115,7 @@ watch(
         :menus="[]"
         :text="userStore.userInfo?.userName || '默认昵称'"
         description=""
-        :tag-text="userStore.userInfo?.roles?.[0]?.roleName || '普通角色'"
+        :tag-text="userStore.userInfo?.roles?.[0]?.roleName ?? '普通角色'"
         @logout="handleLogout"
       />
     </template>

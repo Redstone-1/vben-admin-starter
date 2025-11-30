@@ -6,6 +6,8 @@ import type {
   TreeNode,
 } from 'element-plus';
 
+import type { AddForm } from './constant';
+
 import { reactive, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
@@ -22,64 +24,46 @@ import {
 } from 'element-plus';
 
 import { getRoleMenuTreeSelectApi } from './api';
+import { addFormInitValue } from './constant';
 
 defineOptions({
   name: 'AddForm',
 });
 
-interface AddForm {
-  roleName: string;
-  deptIds: number[];
-  menuIds: number[];
-  roleKey: string;
-  roleSort: number;
-  status: string;
-  remark: string;
-  menuCheckStrictly: boolean;
-  menuTree: any[];
-}
-
+const addForm = reactive<AddForm>(Object.assign({}, addFormInitValue));
+const addFormRef = ref<FormInstance>();
 const treeRef = ref<TreeInstance>();
 const [Modal, modalApi] = useVbenModal({
-  onOpenChange: async (isOpen) => {
+  onOpened: async () => {
     const { row } = modalApi.getData();
 
-    if (isOpen) {
-      const tree = await getRoleMenuTreeSelectApi(row?.roleId ?? '');
+    const tree = await getRoleMenuTreeSelectApi(row?.roleId ?? '');
 
-      if (tree) {
-        if (row) {
-          const { menus, checkedKeys = [] } = tree;
-          addForm.menuTree = menus;
-          addForm.menuIds = checkedKeys || [];
-          treeRef.value!.setCheckedKeys(checkedKeys, false);
-        } else {
-          addForm.menuTree = tree;
-        }
-      }
+    if (row) {
+      const { menus = [], checkedKeys = [] } = tree || {};
+      addForm.menuTree = menus;
+      addForm.menuIds = checkedKeys || [];
+      addForm.roleName = row.roleName;
+      addForm.roleKey = row.roleKey || '';
+      addForm.roleSort = row.roleSort || 2;
+      addForm.status = row.status;
+      addForm.remark = row.remark || '';
+      addForm.menuCheckStrictly = row.menuCheckStrictly || true;
 
-      if (row) {
-        addForm.roleName = row.roleName;
-        addForm.roleKey = row.roleKey || '';
-        addForm.roleSort = row.roleSort || 2;
-        addForm.status = row.status;
-        addForm.remark = row.remark || '';
-        addForm.menuCheckStrictly = row.menuCheckStrictly || true;
-      }
+      treeRef.value!.setCheckedKeys(checkedKeys, false);
+    } else {
+      addForm.menuTree = tree ?? [];
+      addForm.menuIds = [];
+      addForm.roleName = '';
+      addForm.roleKey = '';
+      addForm.roleSort = 2;
+      addForm.status = '';
+      addForm.remark = '';
+      addForm.menuCheckStrictly = true;
     }
+
+    return true;
   },
-});
-const addFormRef = ref<FormInstance>();
-const addForm = reactive<AddForm>({
-  roleName: '',
-  status: '',
-  remark: '',
-  menuCheckStrictly: true,
-  deptIds: [],
-  menuIds: [],
-  roleKey: '',
-  roleSort: 2,
-  menuTree: [],
 });
 
 modalApi.setData({
@@ -152,6 +136,7 @@ const rules = reactive<FormRules>({
             }"
             node-key="id"
             highlight-current
+            :check-strictly="true"
             @check="handleCheck"
           />
         </ElFormItem>

@@ -27,12 +27,13 @@ const searchForm = reactive({
   status: '',
 });
 const gridApiRef = ref();
+const modalTitle = ref('新增角色');
 const gridOptions = getGridOptions(searchForm, gridApiRef);
 const [Grid, gridApi] = useVbenVxeGrid({ gridOptions });
 const [Modal, modalApi] = useVbenModal({
   // 连接抽离的组件
   connectedComponent: AddForm,
-  title: '新增角色',
+  title: modalTitle.value,
   onConfirm: async () => {
     const { addForm, addFormRef, row } = modalApi.getData();
 
@@ -66,6 +67,7 @@ const [Modal, modalApi] = useVbenModal({
 gridApiRef.value = gridApi;
 
 const openModal = (row?: RowType) => {
+  modalTitle.value = row ? '编辑角色' : '新增角色';
   modalApi.setData({
     ...modalApi.getData(),
     row,
@@ -79,12 +81,16 @@ const onSearch = () => {
 };
 
 async function deleteRole(roleId: number) {
-  await gridApi.grid?.clearEdit();
+  try {
+    await gridApi.grid?.clearEdit();
 
-  gridApi.setLoading(true);
-  await deleteRoleApi(roleId);
-  await gridApi.query();
-  gridApi.setLoading(false);
+    gridApi.setLoading(true);
+    await deleteRoleApi(roleId);
+    await gridApi.query();
+    gridApi.setLoading(false);
+  } catch {
+    gridApi.setLoading(false);
+  }
 }
 </script>
 

@@ -1,63 +1,34 @@
-import type { UserInfo } from '@vben/types';
+import type { MenuInfo } from '@vben/types';
 
 import { requestClient } from '#/api/request';
 
 /**
- * 获取用户列表
+ * 获取菜单列表
  */
-export async function getUserListApi(params: {
-  pageNum: number;
-  pageSize: number;
+export async function getMenuListApi(params?: {
+  menuName?: string;
   status?: string;
-  userName?: string;
 }) {
-  return requestClient.get('/system/user/list', { ...params, deptId: 100 });
+  return requestClient.get('/system/menu/list', { ...params });
 }
 
 /**
- * 获取用户列表
+ * 更新菜单信息
  */
-export async function getUserApi(userId: number) {
-  return requestClient.get(`/system/user/${userId}`);
+export async function putMenuApi(params: MenuInfo) {
+  return requestClient.put('/system/menu', params);
 }
 
 /**
- * 改变用户状态
+ * 新增菜单
  */
-export async function changeStatusApi(params: {
-  status: string;
-  userId: number;
-}) {
-  return requestClient.put('/system/user/changeStatus', params);
+export async function postMenuApi(params: MenuInfo) {
+  return requestClient.post('/system/menu', params);
 }
 
 /**
- * 改变用户角色
+ * 删除菜单
  */
-export async function changeUserRoleApi(params: {
-  roleIds: number[];
-  userId: number;
-}) {
-  return requestClient.put('/system/user/authRole', params);
-}
-
-/**
- * 更新用户信息
- */
-export async function putUserApi(params: UserInfo) {
-  return requestClient.put('/system/user', params);
-}
-
-/**
- * 新增用户
- */
-export async function postUserApi(params: UserInfo) {
-  return requestClient.post('/system/user', params);
-}
-
-/**
- * 新增用户
- */
-export async function deleteUserApi(userId: number) {
-  return requestClient.delete(`/system/user/${userId}`);
+export async function deleteMenuApi(menuId: number) {
+  return requestClient.delete(`/system/menu/${menuId}`);
 }
